@@ -56,10 +56,14 @@
     @keyframes floatUp { to { transform: translateY(-120vh); } }
     @keyframes fallDown { to { transform: translateY(120vh); } }
 
-    /* Message bubble */
+    @keyframes treeBlink {
+      0%,100% { filter: drop-shadow(0 0 6px rgba(255,120,180,0.2)); }
+      50% { filter: drop-shadow(0 0 22px rgba(255,120,180,0.9)); }
+    }
+
     .emoji-bubble {
       position: fixed;
-      background: rgba(255, 255, 255, 0.95);
+      background: rgba(255,255,255,0.95);
       padding: 10px 14px;
       border-radius: 16px;
       font-size: 0.9rem;
@@ -68,6 +72,7 @@
       text-align: center;
       z-index: 20;
       animation: bubblePop 2.5s ease forwards;
+      word-wrap: break-word;
     }
 
     body.night .emoji-bubble { background: rgba(40,20,70,0.95); color: #fff; }
@@ -79,6 +84,21 @@
       100% { opacity: 0; transform: translateY(-10px); }
     }
 
+    @keyframes sunGlow {
+      0%,100% { filter: drop-shadow(0 0 18px rgba(255,200,80,0.6)); }
+      50% { filter: drop-shadow(0 0 35px rgba(255,200,80,1)); }
+    }
+
+    @keyframes moonGlow {
+      0%,100% { filter: drop-shadow(0 0 22px rgba(200,180,255,0.6)); }
+      50% { filter: drop-shadow(0 0 40px rgba(220,200,255,1)); }
+    }
+
+    @keyframes moonTwinkle {
+      0%,100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
     @keyframes heartBurst {
       from { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
       to { transform: translate(var(--x), var(--y)) scale(1); opacity: 0; }
@@ -87,7 +107,11 @@
 </head>
 <body>
 
+  <div id="sun" style="position:fixed;top:-20px;left:-20px;font-size:160px;opacity:0.22;z-index:1;filter:drop-shadow(0 0 25px rgba(255,200,80,0.8));animation:sunGlow 3s ease-in-out infinite">☀️</div>
+  <div id="moon" style="display:none;position:fixed;top:-20px;right:-20px;font-size:160px;opacity:0.22;z-index:1;filter:drop-shadow(0 0 30px rgba(200,180,255,0.9));animation:moonGlow 3.5s ease-in-out infinite, moonTwinkle 2s ease-in-out infinite">🌙</div>
+
   <div class="tree" id="tree">🎄</div>
+  <div id="snowman" style="position:fixed;bottom:-20px;left:-10px;font-size:150px;opacity:0.22;z-index:1;filter:drop-shadow(0 0 20px rgba(180,220,255,0.8));animation:moonGlow 4s ease-in-out infinite">⛄️</div>
 
   <header>
     <h1>Our Little Festival World 🎄</h1>
@@ -118,17 +142,14 @@
   <audio id="paperSound" preload="auto" src="sounds/paper.mp3"></audio>
 
   <script>
-    // BASIC NOTES
     const notes = [
       "I love you because you turn even ordinary days into something warm, safe, and beautiful.",
       "Our laughs, our late talks, our silly moments — I carry them all with me, always.",
       "No matter where life takes us, I choose you. Merry almost-Christmas, my love 🎄❤️"
     ];
 
-    // CHRISTMAS CONTENT
-    const christmasLetter = `Merry Christmas, Pauline 🎄❤️\n\nThis is a message made only for you.\nEvery light, every snowflake, every heartbeat\non this page exists because of how much I love you.\n\nI choose you — always 💖`;
-
-    const christmasPoem = `(Write your poem here)\n\nLine by line,\nfrom my heart to yours 💕`;
+    const christmasLetter = `Merry Christmas, Pauline 🎄❤️\n\nThis is a message made only for you.`;
+    const christmasPoem = `(Write your poem here)`;
 
     const oneLiners = [
       "I love you so much baby",
@@ -140,13 +161,20 @@
       "You are so adorable",
       "Merry Christmas!",
       "Happy New Year!",
-      "I love you so so so much baby!"
+      "I love you so so so much baby!",
+      "Mwahh 😘",
+      "Love you to the moon and back 🌙",
+      "You are my sunshine ☀️",
+      "You make my heart smile ❤️",
+        "You are my everything 💖",
+        "Forever and always, my love 💕",
+        "Love you more than words can say 💘"
+
     ];
 
     const dayEmojis = ['❤️','🎈','🎆','💖','✨','🎁','🌸'];
     const nightEmojis = ['❄️','🎁','💖','🌨','☃️','⛄️','🎅🏼'];
 
-    // ELEMENTS
     const overlay = document.getElementById('overlay');
     const noteText = document.getElementById('noteText');
     const paperSound = document.getElementById('paperSound');
@@ -156,13 +184,12 @@
     const lockTimer = document.getElementById('lockTimer');
     const subtitle = document.getElementById('subtitle');
 
-    // NOTE HANDLING
-    function openNote(text, withHearts){
+    function openNote(text, hearts) {
       noteText.innerText = text;
       overlay.style.display = 'flex';
       paperSound.currentTime = 0;
       paperSound.play().catch(()=>{});
-      if (withHearts) startHeartBurst();
+      if (hearts) startHeartBurst();
     }
 
     document.getElementById('closeNote').onclick = () => overlay.style.display = 'none';
@@ -170,33 +197,47 @@
       g.onclick = () => openNote(notes[+g.dataset.note], false);
     });
 
-    // TREE
-    document.getElementById('tree').onclick = () => {
-      const nick = prompt('🧸 What does he call you?');
-      if (nick) alert(`🎄 ${nick}, you are deeply loved ❤️`);
+    document.getElementById('tree').onclick = (ev) => {
+      ev.preventDefault();
+      showBubble(ev.target, 'Mahal! Merry Christmas! 🎄❤️');
     };
 
-    // MUSIC
     let playing = false;
     document.getElementById('musicBtn').onclick = async () => {
       music.volume = 0.3;
-      try {
-        if (!playing) await music.play(); else music.pause();
-        playing = !playing;
-      } catch {
-        alert('Tap once anywhere, then press Play 🎵');
-      }
+      if (!playing) await music.play(); else music.pause();
+      playing = !playing;
     };
 
-    // FLOATING EMOJIS
-    function clearFloating(){ document.querySelectorAll('.float-up,.fall-down').forEach(e=>e.remove()); }
+    function clearFloating() {
+      document.querySelectorAll('.float-up,.fall-down').forEach(e => e.remove());
+    }
 
-    function spawnEmojis(type){
+    function showBubble(target, text) {
+      const bubble = document.createElement('div');
+      bubble.className = 'emoji-bubble';
+      bubble.innerText = text;
+      document.body.appendChild(bubble);
+
+      const rect = target.getBoundingClientRect();
+      let x = rect.left + rect.width / 2 - 110;
+      let y = rect.top - 80;
+
+      x = Math.max(10, Math.min(window.innerWidth - 230, x));
+      y = Math.max(10, y);
+
+      bubble.style.left = x + 'px';
+      bubble.style.top = y + 'px';
+
+      setTimeout(() => bubble.remove(), 2500);
+    }
+
+    function spawnEmojis(type) {
       clearFloating();
       const emojis = type === 'night' ? nightEmojis : dayEmojis;
       const cls = type === 'night' ? 'fall-down' : 'float-up';
 
-      for (let i=0;i<30;i++){
+      for (let i = 0; i < 30; i++) {
         const e = document.createElement('div');
         e.className = cls;
         e.innerText = emojis[Math.floor(Math.random()*emojis.length)];
@@ -204,103 +245,85 @@
         e.style.fontSize = 18 + Math.random()*20 + 'px';
         e.style.animationDuration = 6 + Math.random()*8 + 's';
 
-        const showMessage = (ev) => {
+        const handler = (ev) => {
           ev.preventDefault();
-          ev.stopPropagation();
-
-          const bubble = document.createElement('div');
-          bubble.className = 'emoji-bubble';
-          bubble.innerText = oneLiners[Math.floor(Math.random()*oneLiners.length)];
-
-          const rect = e.getBoundingClientRect();
-          bubble.style.left = rect.left + rect.width / 2 + 'px';
-          bubble.style.top = rect.top - 10 + 'px';
-          bubble.style.transform = 'translateX(-50%)';
-
-          document.body.appendChild(bubble);
-          setTimeout(() => bubble.remove(), 2500);
+          showBubble(e, oneLiners[Math.floor(Math.random()*oneLiners.length)]);
         };
 
-        e.addEventListener('click', showMessage);
-        e.addEventListener('touchstart', showMessage, { passive: false });
-
+        e.addEventListener('click', handler);
+        e.addEventListener('touchstart', handler, { passive: false });
         document.body.appendChild(e);
       }
     }
 
-    // MODE TOGGLE
     document.getElementById('modeBtn').onclick = () => {
       document.body.classList.toggle('night');
       const night = document.body.classList.contains('night');
-      subtitle.innerText = night
-        ? 'A cozy night full of stars, love & us ✨'
-        : 'A tiny pink world full of love, lights & you 💕';
+      document.getElementById('sun').style.display = night ? 'none' : 'block';
+      document.getElementById('moon').style.display = night ? 'block' : 'none';
+      document.getElementById('tree').style.animation = night ? 'treeBlink 2s infinite' : 'none';
+      subtitle.innerText = night ? 'A cozy night full of stars, love & us ✨' : 'A tiny pink world full of love, lights & you 💕';
       spawnEmojis(night ? 'night' : 'day');
     };
 
     spawnEmojis('day');
 
-    // HEART BURST
-    function startHeartBurst(){
+    function startHeartBurst() {
       const note = document.querySelector('.note');
       const rect = note.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
-
-      for (let i = 0; i < 120; i++){
+      for (let i = 0; i < 120; i++) {
         const h = document.createElement('div');
         h.innerText = '💖';
         h.style.position = 'fixed';
         h.style.left = cx + 'px';
         h.style.top = cy + 'px';
-        h.style.fontSize = 16 + Math.random() * 26 + 'px';
+        h.style.fontSize = 16 + Math.random()*26 + 'px';
         h.style.pointerEvents = 'none';
         h.style.zIndex = 9;
-        const angle = Math.random() * Math.PI * 2;
-        const dist = 200 + Math.random() * 300;
-        h.style.setProperty('--x', Math.cos(angle) * dist + 'px');
-        h.style.setProperty('--y', Math.sin(angle) * dist + 'px');
+        const angle = Math.random()*Math.PI*2;
+        const dist = 200 + Math.random()*300;
+        h.style.setProperty('--x', Math.cos(angle)*dist + 'px');
+        h.style.setProperty('--y', Math.sin(angle)*dist + 'px');
         h.style.animation = 'heartBurst 1.8s ease-out forwards';
         document.body.appendChild(h);
-        setTimeout(()=>h.remove(), 2000);
+        setTimeout(()=>h.remove(),2000);
       }
     }
 
-    // CHRISTMAS TIMER
-    const now = new Date();
-    //const christmas = new Date(now.getFullYear(), 11, 25, 0, 0, 0);
+    //const christmas = new Date(new Date().getFullYear(), 11, 25, 0, 0, 0);
     // Test Date
     const christmas = new Date(Date.now() + 5000); // unlocks in 5 seconds
     const lockedGift = document.getElementById('lockedGift');
     const lockedPoem = document.getElementById('lockedPoem');
 
-    function unlockChristmasLetter(){
-      const name = prompt('🎀 It’s Christmas 🎄 \n Type your name EXACTLY (Case sensitive)');
-      if (name !== 'Pauline') return alert('❌ That’s not correct. \n Please enter the name EXACTLY 💕');
-      openNote(christmasLetter, true);
+    function unlockLetter() {
+      const name = prompt('Please Enter your First name EXACTLY ( Case Sensitive )💖');
+      if (name === 'Pauline') openNote(christmasLetter, true);
+      else alert('Cutie, Enter name Correctly please 💕');
     }
 
-    function unlockPoem(){
-      const name = prompt('🎀 It’s Christmas 🎄 \n Type your name EXACTLY (Case sensitive)');
-      if (name !== 'Pauline') return alert('❌ That’s not correct. \n Please enter the name EXACTLY 💕');
-      openNote(christmasPoem, true);
+    function unlockPoem() {
+      const name = prompt('Please Enter your First name EXACTLY ( Case Sensitive )💖');
+      if (name === 'Pauline') openNote(christmasPoem, true);
+      else alert('Cutie, Enter name Correctly please 💕');
     }
 
     setInterval(() => {
       const diff = christmas - new Date();
-      if (diff > 0){
+      if (diff > 0) {
         const d = Math.floor(diff/86400000);
-        const h = Math.floor(diff/3600000%24);
-        const m = Math.floor(diff/60000%60);
-        const s = Math.floor(diff/1000%60);
-        countdown.innerText = `${d}d ${h}h ${m}m ${s}s until Christmas 🎄`;
+        const h = Math.floor(diff/3600000 % 24);
+        const m = Math.floor(diff/60000 % 60);
+        countdown.innerText = `${d}d ${h}h ${m}m until Christmas 🎄`;
         lockTimer.innerText = poemTimer.innerText = `Unlocks in ${d}d ${h}h ${m}m`;
       } else {
         countdown.innerText = 'Merry Christmas 🎅❤️';
         lockTimer.innerText = poemTimer.innerText = 'Unlocked!';
         lockedGift.classList.remove('locked');
         lockedPoem.classList.remove('locked');
-        lockedGift.onclick = unlockChristmasLetter;
+        lockedGift.onclick = unlockLetter;
         lockedPoem.onclick = unlockPoem;
       }
     }, 1000);
